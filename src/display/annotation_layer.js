@@ -60,7 +60,7 @@ function getRectDims(rect) {
  * @property {Object} data
  * @property {HTMLDivElement} layer
  * @property {IPDFLinkService} linkService
- * @property {IDownloadManager} downloadManager
+ * @property {IDownloadManager} [downloadManager]
  * @property {AnnotationStorage} [annotationStorage]
  * @property {string} [imageResourcesPath] - Path for image resources, mainly
  *   for annotation icons. Include trailing slash.
@@ -709,7 +709,7 @@ class LinkAnnotationElement extends AnnotationElement {
       this._bindNamedAction(link, data.action);
       isBound = true;
     } else if (data.attachment) {
-      this._bindAttachment(link, data.attachment);
+      this.#bindAttachment(link, data.attachment, data.attachmentDest);
       isBound = true;
     } else if (data.setOCGState) {
       this.#bindSetOCGState(link, data.setOCGState);
@@ -793,14 +793,16 @@ class LinkAnnotationElement extends AnnotationElement {
    * Bind attachments to the link element.
    * @param {Object} link
    * @param {Object} attachment
+   * @param {str} [dest]
    */
-  _bindAttachment(link, attachment) {
+  #bindAttachment(link, attachment, dest = null) {
     link.href = this.linkService.getAnchorUrl("");
     link.onclick = () => {
       this.downloadManager?.openOrDownloadData(
         this.container,
         attachment.content,
-        attachment.filename
+        attachment.filename,
+        dest
       );
       return false;
     };
@@ -1159,6 +1161,7 @@ class TextWidgetAnnotationElement extends WidgetAnnotationElement {
   constructor(parameters) {
     const isRenderable =
       parameters.renderForms ||
+      parameters.data.hasOwnCanvas ||
       (!parameters.data.hasAppearance && !!parameters.data.fieldValue);
     super(parameters, { isRenderable });
   }
@@ -1497,6 +1500,10 @@ class TextWidgetAnnotationElement extends WidgetAnnotationElement {
       element.textContent = this.data.fieldValue;
       element.style.verticalAlign = "middle";
       element.style.display = "table-cell";
+
+      if (this.data.hasOwnCanvas) {
+        element.hidden = true;
+      }
     }
 
     this._setTextStyle(element);
